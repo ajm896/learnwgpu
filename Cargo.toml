@@ -3,14 +3,17 @@ name = "learnwgpu"
 version = "0.1.0"
 edition = "2024"
 
+
 [dependencies]
-anyhow = "1.0"
+image = "0.23"
+cgmath = "0.18"
 winit = { version = "0.30", features = ["android-native-activity"] }
 env_logger = "0.10"
 log = "0.4"
-wgpu = "27.0.0"
 pollster = "0.3"
-bytemuck = "1.24"
+wgpu = "27.0.0"
+bytemuck = { version = "1.24", features = [ "derive" ] } # NEW!
+anyhow = "1.0.100"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -30,4 +33,3 @@ web-sys = { version = "0.3", features = [
     "Window",
     "Element",
 ]}
-
