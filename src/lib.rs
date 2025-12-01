@@ -265,26 +265,31 @@ impl InstanceRaw {
 
 // This will store the state of our game
 pub struct State {
-    instances: Vec<Instance>,
-    instance_buffer: wgpu::Buffer,
+    window: Arc<Window>,
+
     surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     is_surface_configured: bool,
+
     render_pipeline: wgpu::RenderPipeline,
+
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
+    instance_buffer: wgpu::Buffer,
     //num_vertices: u32,
     num_indices: u32,
+    instances: Vec<Instance>,
+
     diffuse_bind_group: wgpu::BindGroup,
     //diffuse_texture: texture::Texture,
-    camera: Camera,
-    camera_uniform: CameraUniform,
-    camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
+    camera_buffer: wgpu::Buffer,
+    camera_uniform: CameraUniform,
+    camera: Camera,
+
     camera_controller: CameraController,
-    window: Arc<Window>,
 }
 
 impl State {
@@ -292,6 +297,7 @@ impl State {
         let size = window.inner_size();
         let camera_controller = CameraController::new(2.0);
 
+        // Core GPU context
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::PRIMARY,
             ..Default::default()
@@ -315,6 +321,45 @@ impl State {
                 trace: wgpu::Trace::Off,
             })
             .await?;
+
+        // Surface configuration
+        let surface_caps = surface.get_capabilities(&adapter);
+
+        let surface_format = surface_caps
+            .formats
+            .iter()
+            .find(|f| f.is_srgb())
+            .copied()
+            .unwrap_or(surface_caps.formats[0]);
+
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            width: size.width,
+            height: size.height,
+            present_mode: surface_caps.present_modes[0],
+            alpha_mode: surface_caps.alpha_modes[0],
+            view_formats: vec![],
+            desired_maximum_frame_latency: 2,
+        };
+        // Configure the surface before first use
+        surface.configure(&device, &config);
+
+        // Buffers
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        let _num_vertices = VERTICES.len() as u32;
+        let num_indices = INDICES.len() as u32;
 
         let instances = (0..NUM_INSTANCES_PER_ROW)
             .flat_map(|z| {
@@ -349,28 +394,7 @@ impl State {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        let surface_caps = surface.get_capabilities(&adapter);
-
-        let surface_format = surface_caps
-            .formats
-            .iter()
-            .find(|f| f.is_srgb())
-            .copied()
-            .unwrap_or(surface_caps.formats[0]);
-
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface_format,
-            width: size.width,
-            height: size.height,
-            present_mode: surface_caps.present_modes[0],
-            alpha_mode: surface_caps.alpha_modes[0],
-            view_formats: vec![],
-            desired_maximum_frame_latency: 2,
-        };
-        // Configure the surface before first use
-        surface.configure(&device, &config);
-
+        // Textures and bind groups
         let diffuse_bytes = include_bytes!("../happy-tree.png");
         let diffuse_texture =
             texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "happy-tree.png").unwrap();
@@ -413,6 +437,7 @@ impl State {
             label: Some("diffuse_bind_group"),
         });
 
+        // Camera and bind groups
         let camera = Camera {
             eye: (0.0, 1.0, 2.0).into(),
             target: (0.0, 0.0, 0.0).into(),
@@ -456,6 +481,7 @@ impl State {
             label: Some("camera_bind_group"),
         });
 
+        // Pipeline
         let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
 
         let render_pipeline_layout =
@@ -508,41 +534,26 @@ impl State {
             cache: None,     // 6.
         });
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
-        let _num_vertices = VERTICES.len() as u32;
-        let num_indices = INDICES.len() as u32;
-
         Ok(Self {
             window,
             surface,
             device,
             queue,
             config,
-            instances,
-            instance_buffer,
             is_surface_configured: true,
             render_pipeline,
-            //num_vertices,
-            //diffuse_texture,
             vertex_buffer,
             index_buffer,
+            instance_buffer,
             num_indices,
+            //num_vertices,
+            //diffuse_texture,
+            instances,
             diffuse_bind_group,
-            camera,
-            camera_uniform,
             camera_bind_group,
             camera_buffer,
+            camera_uniform,
+            camera,
             camera_controller,
         })
     }
