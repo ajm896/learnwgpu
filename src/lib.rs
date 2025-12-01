@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use wgpu::util::{self, DeviceExt};
+use wgpu::util::DeviceExt;
 use winit::{
     application::ApplicationHandler,
     event::*,
@@ -94,7 +94,7 @@ impl Camera {
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
 
         // 3.
-        return OPENGL_TO_WGPU_MATRIX * proj * view;
+        OPENGL_TO_WGPU_MATRIX * proj * view
     }
 }
 
@@ -207,7 +207,7 @@ pub struct State {
     //num_vertices: u32,
     num_indices: u32,
     diffuse_bind_group: wgpu::BindGroup,
-    diffuse_texture: texture::Texture,
+    //diffuse_texture: texture::Texture,
     camera: Camera,
     camera_uniform: CameraUniform,
     camera_buffer: wgpu::Buffer,
@@ -441,7 +441,7 @@ impl State {
             is_surface_configured: true,
             render_pipeline,
             //num_vertices,
-            diffuse_texture,
+            //diffuse_texture,
             vertex_buffer,
             index_buffer,
             num_indices,
@@ -544,6 +544,12 @@ pub struct App {
     #[cfg(target_arch = "wasm32")]
     proxy: Option<winit::event_loop::EventLoopProxy<State>>,
     state: Option<State>,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl App {
