@@ -283,7 +283,11 @@ pub struct State {
     instances: Vec<Instance>,
 
     diffuse_bind_group: wgpu::BindGroup,
-    //diffuse_texture: texture::Texture,
+    #[allow(dead_code)]
+    diffuse_texture: texture::Texture,
+    camera: Camera,
+    camera_uniform: CameraUniform,
+    camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
     camera_buffer: wgpu::Buffer,
     camera_uniform: CameraUniform,
@@ -468,7 +472,7 @@ impl State {
                         min_binding_size: None,
                     },
                     count: None,
-                }],
+                }],pp
                 label: Some("camera_bind_group_layout"),
             });
 
